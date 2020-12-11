@@ -3,11 +3,11 @@ class Particle {
 		this.position = clothFunction(x, y); // position
 		this.previous = clothFunction(x, y); // previous
 		this.original = clothFunction(x, y);
-		this.accelerationn = new THREE.Vector3(0, 0, 0); // acceleration
+		this.accelerationn = new Vector3(0, 0, 0); // acceleration
 		this.mass = mass;
 		this.invMass = 1 / mass;
-		this.tmp = new THREE.Vector3();
-		this.tmp2 = new THREE.Vector3();
+		this.tmp = new Vector3();
+		this.tmp2 = new Vector3();
 	}
 
 	addForce(force) {
@@ -82,34 +82,24 @@ class Cloth {
 // http://freespace.virgin.net/hugo.elias/models/m_cloth.htm
 // http://cg.alexandra.dk/tag/spring-mass-system/
 
-import Stats from 'stats.js';
 import Tweakpane from 'tweakpane';
 
-// import Cloth from './Cloth';
+import { MeshPhongMaterial } from 'three/src/materials/MeshPhongMaterial';
+import { Mesh } from 'three/src/objects/Mesh';
+import { BoxGeometry, DoubleSide, ParametricGeometry, ShaderMaterial, Vector3, VideoTexture } from 'three';
 
 // BEWARE CODE - SCARY NOT SO NICE CODE!
 console.log('%cBEWARE CODE - SCARY NOT SO NICE CODE!', 'color: red; font-size: 40px;');
 
+
 const pane = new Tweakpane();
-const stats = new Stats();
-stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
-document.body.appendChild(stats.dom);
 
 
-const container = $('#app');
+
 const videoTextureElement = document.getElementById('video-texture');
-let isPlaying = false;
 
-// function playPauseVideo() {
-// 	if (isPlaying) {
-// 		isPlaying = false
-// 		videoTextureElement.pause()
-// 	} else {
-// 		isPlaying = true
-// 		videoTextureElement.play()
-// 	}
-// }
-// container.click(playPauseVideo);
+const vertexShader = document.getElementById('vertexShaderDepth').textContent;
+const fragmentShader = document.getElementById('fragmentShaderDepth').textContent;
 
 
 /*
@@ -129,17 +119,21 @@ const clothHeight = restDistance * ySegs; // 500
 const cloth = new Cloth(xSegs, ySegs);
 
 /////
-function clothFunction(u, v) {
+function clothFunction(u, v, target) {
 	const x = (u - 0.5) * clothWidth;
 	const y = (v + 0.5) * clothHeight;
 	const z = 0;
 
-	return new THREE.Vector3(x, y, z);
+	if (target) {
+		target.set(x, y, z);
+	}
+
+	return new Vector3(x, y, z);
 };
 
 
 var GRAVITY = 981 * 1.4; //
-var gravity = new THREE.Vector3(0, - GRAVITY, 0).multiplyScalar(MASS);
+var gravity = new Vector3(0, - GRAVITY, 0).multiplyScalar(MASS);
 
 
 var TIMESTEP = 18 / 1000;
@@ -150,8 +144,8 @@ var pins = [];
 
 // var wind = true;
 var windStrength = 8;
-var windForce = new THREE.Vector3(0, 0, 0);
-var tmpForce = new THREE.Vector3();
+var windForce = new Vector3(0, 0, 0);
+var tmpForce = new Vector3();
 var lastTime;
 
 
@@ -175,7 +169,7 @@ pane.addInput(PARAMS, 'windPowerMult');
 
 
 
-var diff = new THREE.Vector3();
+var diff = new Vector3();
 
 function satisifyConstrains(p1, p2, distance) {
 	diff.subVectors(p2.position, p1.position);
@@ -187,14 +181,6 @@ function satisifyConstrains(p1, p2, distance) {
 	p2.position.sub(correctionHalf);
 }
 
-THREE.ImageUtils.crossOrigin = '';
-
-var camera, scene, renderer;
-var clothGeometry;
-var sphere;
-var object;
-var rotate = {};
-rotate.right = true;
 
 var pinsFormation = [];
 var pins = [10];
@@ -222,219 +208,52 @@ pins = pinsFormation[1];
 
 
 export default class ClothSim {
-	constructor(aScene) {
-		// scene = aScene;
-		this._scene = aScene;
+	constructor(scene) {
+		this._scene = scene;
 
 
-		this._animate = this._animate.bind(this);
+		this.update = this.update.bind(this);
 		this._render = this._render.bind(this);
 		this._simulate = this._simulate.bind(this);
 		this._init();
-		this._animate();
 	}
 
 	_init() {
-		// scene
-		scene = new THREE.Scene();
+		this._createHanger();
+		this._createClothTexture();
 
-		console.log(scene);
-		scene.fog = new THREE.Fog(0x1e1e1e, 500, 10000);
+		// Cloth creation
+		this._clothGeometry = new ParametricGeometry(clothFunction, cloth.xSegs, cloth.ySegs);
+		this._clothGeometry.dynamic = true;
 
-
-
-		// camera
-		camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 1, 10000);
-		camera.position.y = 50;
-		camera.position.z = 1800;
-		scene.add(camera);
-
-		// pole
-
-		var poleMat = new THREE.MeshPhongMaterial({ color: 0xffffff, specular: 0x111111, shininess: 100 });
-
-
-		var mesh = new THREE.Mesh(new THREE.BoxGeometry(1500, 5, 5), poleMat);
-		mesh.position.y = -75 + 750 / 2;
-		mesh.position.x = -10;
-		mesh.receiveShadow = true;
-		mesh.castShadow = true;
-		scene.add(mesh);
-
-		// lights
-
-		var light, materials;
-
-		scene.add(new THREE.AmbientLight(0x888888));
-
-		light = new THREE.DirectionalLight(0xdfebff, 1.5);
-		//light.position.set( 50, 200, 100 );
-		light.position.set(-1000, 100, 50);
-		light.position.multiplyScalar(1);
-
-		light.castShadow = true;
-		// light.shadowCameraVisible = true;
-
-		light.shadowMapWidth = 1024;
-		light.shadowMapHeight = 1024;
-
-		var d = 300;
-
-		light.shadowCameraLeft = -d;
-		light.shadowCameraRight = d;
-		light.shadowCameraTop = d;
-		light.shadowCameraBottom = -d;
-
-		light.shadowCameraFar = 1000;
-
-		scene.add(light);
-
-		const leftLight = light;
-		light.position.set(1000, 100, 50);
-		scene.add(leftLight);
-
-
-		var directionalLightHelper = new THREE.DirectionalLightHelper(light, 20);
-		//scene.add(directionalLightHelper);
-
-		// cloth material
-		var createClothTexture = function (url) {
-
-			var clothTexture = new THREE.VideoTexture(videoTextureElement);
-
-			clothTexture.flipY = false;
-
-			// clothTexture.play();
-			// console.log(clothTexture.rotation, clothTexture.center);
-			// clothTexture.rotation = Math.PI * 2;
-
-			// clothTexture.center = new THREE.Vector2(0.5, 0.5); // center of texture.
-			// console.log(clothTexture.rotation);
-
-			// var clothTexture = THREE.ImageUtils.loadTexture(url);
-			// clothTexture.wrapS = clothTexture.wrapT = THREE.RepeatWrapping;
-			// clothTexture.wrapS = clothTexture.wrapT = THREE.RepeatWrapping;
-			clothTexture.anisotropy = 56;
-			// clothTexture.repeat.set(12, 4);
-			return clothTexture
-		};
-
-		var createClothMaterial = function (clothTexture) {
-			var clothMaterial = new THREE.MeshPhongMaterial({
-				specular: 0x030303,
-				emissive: 0x111111,
-				map: clothTexture,
-				side: THREE.DoubleSide,
-				alphaTest: 0.5
-			});
-			return clothMaterial
-		};
-
-
-
-		// cloth geometry
-		clothGeometry = new THREE.ParametricGeometry(clothFunction, cloth.xSegs, cloth.ySegs);
-		clothGeometry.dynamic = true;
-		// create initial texture, material
-		var initClothTexture = createClothTexture('https://s3-us-west-2.amazonaws.com/s.cdpn.io/161712/pattern-1.png');
-		var initClothMaterial = createClothMaterial(initClothTexture);
-
-		var uniforms = { texture: { type: "t", value: initClothTexture } };
-		var vertexShader = document.getElementById('vertexShaderDepth').textContent;
-		var fragmentShader = document.getElementById('fragmentShaderDepth').textContent;
-
-		// cloth mesh
-		object = new THREE.Mesh(clothGeometry, initClothMaterial);
-		object.position.set(0, 50, 0);
-		// object.rotation.z = Math.PI;
-		object.castShadow = true;
-		scene.add(object);
-
-		//light.target = object;
-
-		// update clothObject with new pattern src
-		var updateClothTexture = function (object, src) {
-			this.clothTexture = createClothTexture(src);
-			///this.clothMaterial = createClothMaterial(this.clothTexture);
-			//var uniforms = { texture:  { type: "t", value: this.clothTexture } };
-			object.material.map = this.clothTexture;
-		}
-
-		// change pattern
-		$('a').click(function () {
-			var src = $('img', this).attr('src');
-			updateClothTexture(object, src)
-		});
-
-		object.customDepthMaterial = new THREE.ShaderMaterial({
-			uniforms: uniforms,
-			vertexShader: vertexShader,
-			fragmentShader: fragmentShader,
-			side: THREE.DoubleSide
-		});
-
-		renderer = new THREE.WebGLRenderer({ antialias: true });
-		renderer.setPixelRatio(window.devicePixelRatio);
-
-		renderer.setSize(container.width(), container.height());
-		renderer.setClearColor(scene.fog.color);
-
-		container.append(renderer.domElement);
-
-		renderer.gammaInput = true;
-		renderer.gammaOutput = true;
+		const clothMaterial = this._createClothMaterial(this.clothTexture);
+		this._createClothMesh(this._clothGeometry, clothMaterial);
 	}
 
-	_animate() {
-		requestAnimationFrame(this._animate);
-
-		stats.begin();
-
+	update() {
 		const time = Date.now();
 
 		windStrength = Math.cos(time / 7000) * PARAMS.windPowerMult + PARAMS.windPowerAddition;
 		windForce.set(Math.sin(time / 2000), Math.cos(time / 3000), Math.sin(time / 1000)).normalize().multiplyScalar(windStrength);
 
-		// this._simulate(time);
+		this._simulate(time);
 		this._render();
-		//stats.update();
-
-		stats.end();
 	}
 
 	_render() {
-		var timer = Date.now() * 0.0003;
-		var position = 0;
+		const particles = cloth.particles;
 
-		var p = cloth.particles;
+		for (let i = 0, il = particles.length; i < il; i++) {
 
-		for (var i = 0, il = p.length; i < il; i++) {
-
-			clothGeometry.vertices[i].copy(p[i].position);
+			this._clothGeometry.vertices[i].copy(particles[i].position);
 
 		}
-		clothGeometry.computeFaceNormals();
+		this._clothGeometry.computeFaceNormals();
 
-		clothGeometry.computeVertexNormals();
+		this._clothGeometry.computeVertexNormals();
 
-		clothGeometry.normalsNeedUpdate = true;
-		clothGeometry.verticesNeedUpdate = true;
-
-
-		// if (rotate.left) {
-		// 	camera.position.x = Math.cos(timer) * 1500;
-		// 	camera.position.z = Math.sin(timer) * 1500;
-
-		// }
-		// if (rotate.right) {
-		// 	camera.position.x = - Math.sin(timer) * 1500;
-		// 	camera.position.z = - Math.cos(timer) * 1500;
-
-		// }
-
-		// camera.lookAt(scene.position);
-
-		renderer.render(scene, camera);
+		this._clothGeometry.normalsNeedUpdate = true;
+		this._clothGeometry.verticesNeedUpdate = true;
 	}
 
 	_simulate(time) {
@@ -442,15 +261,14 @@ export default class ClothSim {
 
 			lastTime = time;
 			return;
-
 		}
 
-		var i, il, particles, particle, pt, constrains, constrain;
+		let i, il, particles, particle, pt, constrains, constrain;
 
 		// Aerodynamics forces
 		if (PARAMS.wind) {
 
-			var face, faces = clothGeometry.faces, normal;
+			let face, faces = this._clothGeometry.faces, normal;
 
 			particles = cloth.particles;
 
@@ -479,13 +297,11 @@ export default class ClothSim {
 
 		constrains = cloth.constrains,
 			il = constrains.length;
-		for (let i = 0; i < il; i++) {
 
+		for (let i = 0; i < il; i++) {
 			constrain = constrains[i];
 			satisifyConstrains(constrain[0], constrain[1], constrain[2]);
-
 		}
-
 
 		// Pin Constrains
 		for (let i = 0, il = pins.length; i < il; i++) {
@@ -496,4 +312,56 @@ export default class ClothSim {
 		}
 	}
 
+	/////
+	// Creating stuff
+	/////
+
+	// Can also provide a url property for dynamic textures
+	_createClothTexture() {
+		const clothTexture = new VideoTexture(videoTextureElement);
+		clothTexture.flipY = false;
+		clothTexture.anisotropy = 56;
+		this.clothTexture = clothTexture;
+	}
+
+	_createClothMaterial(clothTexture) {
+		const clothMaterial = new MeshPhongMaterial({
+			specular: 0x030303,
+			emissive: 0x111111,
+			map: clothTexture,
+			side: DoubleSide,
+			alphaTest: 0.5
+		});
+
+		return clothMaterial
+	};
+
+	_createClothMesh(clothGeo, clothMat) {
+		const uniforms = { texture: { type: "t", value: this.clothTexture } };
+
+		const clothMesh = new Mesh(clothGeo, clothMat);
+		clothMesh.position.set(0, 50, 0);
+		clothMesh.castShadow = true;
+
+		clothMesh.customDepthMaterial = new ShaderMaterial({
+			uniforms: uniforms,
+			vertexShader: vertexShader,
+			fragmentShader: fragmentShader,
+			side: DoubleSide
+		});
+
+		this._scene.add(clothMesh);
+	}
+
+	_createHanger() {
+		// Currently a pole
+		const hangerMat = new MeshPhongMaterial({ color: 0xffffff, specular: 0x111111, shininess: 100 });
+
+		const hangerMesh = new Mesh(new BoxGeometry(1500, 5, 5), hangerMat);
+		hangerMesh.position.y = -75 + 750 / 2;
+		hangerMesh.position.x = -10;
+		hangerMesh.receiveShadow = true;
+		hangerMesh.castShadow = true;
+		this._scene.add(hangerMesh);
+	}
 }
