@@ -1,0 +1,27 @@
+{
+  "name": "three-js-cloth",
+  "version": "0.0.1",
+  "private": true,
+  "author": "Kang Yun Wang <me@kyunwang.nl> (https://www.kyunwang.nl)",
+  "license": "MIT",
+  "description": "",
+  "keywords": [],
+  "scripts": {
+    "start": "parcel -p 5500 src/index.html",
+    "develop": "parcel -p 5500 watch src/index.html",
+    "deploy": "surge ./dist/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kyunwang/three-js-cloth.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kyunwang/three-js-cloth/issues"
+  },
+  "homepage": "https://github.com/kyunwang/three-js-cloth",
+  "dependencies": {
+    "parcel-bundler": "^1.12.4",
+    "stats.js": "^0.17.0",
+    "tweakpane": "^1.5.7"
+  }
+}

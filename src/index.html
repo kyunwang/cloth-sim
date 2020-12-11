@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8">
+  <title>Three.js cloth test with code which needs soo much cleaning</title>
+	<!-- Based on the three js cloth example - not working with the latest THREE version atm -->
+	<link rel="stylesheet" href="./style.css">
+
+</head>
+<body>
+    <!-- GLSL fragment shader-->
+    <!-- https://threejs.org/examples/#webgl_animation_cloth-->
+		<div id="app"></div>
+		
+
+		<video
+			id="video-texture"
+			src="./AGA_Flag_Vid.mp4"
+			controls
+			style="visibility: visible; display: none;"
+			loop
+			<!-- autoplay -->
+			<!-- muted -->
+		>
+		</video>
+    <script type="x-shader/x-fragment" id="fragmentShaderDepth">
+      uniform sampler2D texture;
+      varying vec2 vUV;
+      
+      vec4 pack_depth( const in float depth ) {
+      
+      const vec4 bit_shift = vec4( 256.0 * 256.0 * 256.0, 256.0 * 256.0, 256.0, 1.0 );
+      const vec4 bit_mask  = vec4( 0.0, 1.0 / 256.0, 1.0 / 256.0, 1.0 / 256.0 );
+      vec4 res = fract( depth * bit_shift );
+      res -= res.xxyz * bit_mask;
+      return res;
+      
+      }
+      
+      void main() {
+      
+      vec4 pixel = texture2D( texture, vUV );
+      
+      if ( pixel.a < 0.5 ) discard;
+      
+      gl_FragData[ 0 ] = pack_depth( gl_FragCoord.z );
+      
+      }
+    </script>
+    <!-- GLSL vertex shader -->
+    <!-- https://threejs.org/examples/#webgl_animation_cloth-->
+    <script type="x-shader/x-fragment" id="vertexShaderDepth">
+      varying vec2 vUV;
+      
+      void main() {
+      
+      vUV = 0.75 * uv;
+      
+      vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+      
+      gl_Position = projectionMatrix * mvPosition;
+      
+      }
+    </script>
+
+<!-- <script src="./stats.min.js"></script> -->
+
+<!-- Most updated versions seem not to work with this - needs a rewrite eitherwaay -->
+<script src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r70/three.min.js'></script>
+<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r123/three.min.js" integrity="sha512-Q+IG0h7As6sfqE2t1Xf5IeamNyCXb4EXxGCA9Mlbpv7xtwurVHNdVDbyWeSQ3ulPf2FRlqeu77Ec3SJDdIR63w==" crossorigin="anonymous"></script> -->
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script>
+
+
+<script  src="./script.js"></script>
+
+</body>
+</html>
