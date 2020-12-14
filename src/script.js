@@ -1,3 +1,15 @@
+// References & sample code
+// https://threejs.org/examples/webgl_animation_cloth.html
+// https://threejs.org/examples/js/Cloth.js
+// http://freespace.virgin.net/hugo.elias/models/m_cloth.htm
+// http://cg.alexandra.dk/tag/spring-mass-system/
+import { MeshPhongMaterial } from 'three/src/materials/MeshPhongMaterial';
+import { Mesh } from 'three/src/objects/Mesh';
+import { BoxGeometry, DoubleSide, ParametricGeometry, ShaderMaterial, Vector3, VideoTexture } from 'three';
+
+//////////
+// Particle Class
+//////////
 class Particle {
 	constructor(x, y, z, mass) {
 		this.position = clothFunction(x, y); // position
@@ -14,7 +26,6 @@ class Particle {
 		this.accelerationn.add(
 			this.tmp2.copy(force).multiplyScalar(this.invMass)
 		);
-
 	}
 
 	integrate(timesq) {
@@ -76,38 +87,22 @@ class Cloth {
 }
 
 
-// References & sample code
-// https://threejs.org/examples/webgl_animation_cloth.html
-// https://threejs.org/examples/js/Cloth.js
-// http://freespace.virgin.net/hugo.elias/models/m_cloth.htm
-// http://cg.alexandra.dk/tag/spring-mass-system/
-
-import Tweakpane from 'tweakpane';
-
-import { MeshPhongMaterial } from 'three/src/materials/MeshPhongMaterial';
-import { Mesh } from 'three/src/objects/Mesh';
-import { BoxGeometry, DoubleSide, ParametricGeometry, ShaderMaterial, Vector3, VideoTexture } from 'three';
-
-// BEWARE CODE - SCARY NOT SO NICE CODE!
-console.log('%cBEWARE CODE - SCARY NOT SO NICE CODE!', 'color: red; font-size: 40px;');
-
-
-const pane = new Tweakpane();
-
-
-
 const videoTextureElement = document.getElementById('video-texture');
-
 const vertexShader = document.getElementById('vertexShaderDepth').textContent;
 const fragmentShader = document.getElementById('fragmentShaderDepth').textContent;
 
+// Broke it somewhere when updating THREE v70 to v123
+// Less vibrant cloth is right (needs some adjusting)
+// The end bottom corner seems to be stretching to somewhere
 
 /*
  * Cloth Simulation using a relaxed constrains solver
  */
-var DAMPING = 0.03;
-var DRAG = 1 - DAMPING;
-var MASS = .1;
+
+// Settiings and setup
+const DAMPING = 0.03;
+const DRAG = 1 - DAMPING;
+const MASS = .1;
 
 const restDistance = 25;
 
@@ -132,26 +127,22 @@ function clothFunction(u, v, target) {
 };
 
 
-var GRAVITY = 981 * 1.4; //
-var gravity = new Vector3(0, - GRAVITY, 0).multiplyScalar(MASS);
+const GRAVITY = 981 * 1.4; //
+const gravity = new Vector3(0, - GRAVITY, 0).multiplyScalar(MASS);
 
 
-var TIMESTEP = 18 / 1000;
-var TIMESTEP_SQ = TIMESTEP * TIMESTEP;
+const TIMESTEP = 18 / 1000;
+const TIMESTEP_SQ = TIMESTEP * TIMESTEP;
 
-var pins = [];
-
-
-// var wind = true;
-var windStrength = 8;
-var windForce = new Vector3(0, 0, 0);
-var tmpForce = new Vector3();
-var lastTime;
+let windStrength = 8;
+const windForce = new Vector3(0, 0, 0);
+const tmpForce = new Vector3();
+let lastTime;
 
 
 
 // TWEAKPANE stuff
-var PARAMS = {
+const PARAMS = {
 	wind: true,
 	windPowerAddition: 12,
 	windPowerMult: 18
@@ -160,34 +151,25 @@ var PARAMS = {
 	// windfore
 }
 
-pane.addInput(PARAMS, 'wind');
-pane.addInput(PARAMS, 'windPowerAddition');
-pane.addInput(PARAMS, 'windPowerMult');
-
-
-
-
-
-
-var diff = new Vector3();
+const diff = new Vector3();
 
 function satisifyConstrains(p1, p2, distance) {
 	diff.subVectors(p2.position, p1.position);
-	var currentDist = diff.length();
+	const currentDist = diff.length();
 	if (currentDist == 0) return; // prevents division by 0
-	var correction = diff.multiplyScalar(1 - distance / currentDist);
-	var correctionHalf = correction.multiplyScalar(0.5);
+	const correction = diff.multiplyScalar(1 - distance / currentDist);
+	const correctionHalf = correction.multiplyScalar(0.5);
 	p1.position.add(correctionHalf);
 	p2.position.sub(correctionHalf);
 }
 
 
-var pinsFormation = [];
-var pins = [10];
+const pinsFormation = [];
+let pins = [];
 
-pinsFormation.push(pins);
+// pinsFormation.push(pins);
 
-//pins = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30 ];
+// pins = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30];
 for (let i = 0; i < 60; i++) {
 	pins.push(i);
 }
@@ -203,9 +185,7 @@ pinsFormation.push( pins );
 //pins = [ 0, cloth.w / 2, cloth.w ]; // three pins
 //pinsFormation.push( pins );
 
-pins = pinsFormation[1];
-
-
+// pins = pinsFormation[1];
 
 export default class ClothSim {
 	constructor(scene) {
@@ -242,12 +222,12 @@ export default class ClothSim {
 
 	_render() {
 		const particles = cloth.particles;
+		const totalParticles = particles.length;
 
-		for (let i = 0, il = particles.length; i < il; i++) {
-
+		for (let i = 0; i < totalParticles; i++) {
 			this._clothGeometry.vertices[i].copy(particles[i].position);
-
 		}
+
 		this._clothGeometry.computeFaceNormals();
 
 		this._clothGeometry.computeVertexNormals();
@@ -258,24 +238,20 @@ export default class ClothSim {
 
 	_simulate(time) {
 		if (!lastTime) {
-
 			lastTime = time;
 			return;
 		}
 
-		let i, il, particles, particle, pt, constrains, constrain;
+		let particles = cloth.particles;
 
 		// Aerodynamics forces
 		if (PARAMS.wind) {
+			let faces = this._clothGeometry.faces;
+			const totalFaces = faces.length
 
-			let face, faces = this._clothGeometry.faces, normal;
-
-			particles = cloth.particles;
-
-			for (let i = 0, il = faces.length; i < il; i++) {
-
-				face = faces[i];
-				normal = face.normal;
+			for (let i = 0; i < totalFaces; i++) {
+				let face = faces[i];
+				let normal = face.normal;
 
 				tmpForce.copy(normal).normalize().multiplyScalar(normal.dot(windForce));
 				particles[face.a].addForce(tmpForce);
@@ -284,9 +260,10 @@ export default class ClothSim {
 			}
 		}
 
-		for (let particles = cloth.particles, i = 0, il = particles.length
-			; i < il; i++) {
+		let particle;
+		const totalParticles = particles.length;
 
+		for (let i = 0; i < totalParticles; i++) {
 			particle = particles[i];
 			particle.addForce(gravity);
 
@@ -294,19 +271,20 @@ export default class ClothSim {
 		}
 
 		// Start Constrains
+		let constrains = cloth.constrains;
+		let constrain;
+		const totalConstrains = constrains.length;
 
-		constrains = cloth.constrains,
-			il = constrains.length;
-
-		for (let i = 0; i < il; i++) {
+		for (let i = 0; i < totalConstrains; i++) {
 			constrain = constrains[i];
 			satisifyConstrains(constrain[0], constrain[1], constrain[2]);
 		}
 
 		// Pin Constrains
-		for (let i = 0, il = pins.length; i < il; i++) {
-			var xy = pins[i];
-			var p = particles[xy];
+		const totalPins = pins.length;
+		for (let i = 0; i < totalPins; i++) {
+			let xy = pins[i];
+			let p = particles[xy];
 			p.position.copy(p.original);
 			p.previous.copy(p.original);
 		}
@@ -363,5 +341,14 @@ export default class ClothSim {
 		hangerMesh.receiveShadow = true;
 		hangerMesh.castShadow = true;
 		this._scene.add(hangerMesh);
+	}
+
+	// Debug
+	addDebug(debugPane) {
+		const clothFolder = debugPane.addFolder({ title: 'Cloth' })
+
+		clothFolder.addInput(PARAMS, 'wind');
+		clothFolder.addInput(PARAMS, 'windPowerAddition');
+		clothFolder.addInput(PARAMS, 'windPowerMult');
 	}
 }

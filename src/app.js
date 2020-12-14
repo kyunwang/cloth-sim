@@ -1,9 +1,6 @@
 import { Scene } from 'three/src/scenes/Scene'
 import { WebGLRenderer } from 'three/src/renderers/WebGLRenderer'
 import { PerspectiveCamera } from 'three/src/cameras/PerspectiveCamera'
-import { BoxBufferGeometry } from 'three/src/geometries/BoxBufferGeometry'
-import { MeshStandardMaterial } from 'three/src/materials/MeshStandardMaterial'
-import { Mesh } from 'three/src/objects/Mesh'
 import { PointLight } from 'three/src/lights/PointLight'
 import { Color } from 'three/src/math/Color'
 
@@ -34,21 +31,21 @@ class App {
 		this._createScene()
 		this._createCamera()
 		this._createRenderer()
-		// this._createBox()
+
 		this._createLight()
 		this._addListeners()
 
+		this._createDebugPanel();
+
 		this.cloth = new ClothSim(this.scene);
-
-
-		this._createDebugPanel()
+		this.cloth.addDebug(this.debugPane);
 
 		this.renderer.setAnimationLoop(() => {
 			stats.begin();
 
 			// Do updates
 			// this._update()
-			// this.cloth.update();
+			this.cloth.update();
 
 			// Render now
 			this._render();
@@ -63,8 +60,6 @@ class App {
 	}
 
 	_update() {
-		// this.box.rotation.y += 0.01
-		// this.box.rotation.z += 0.006
 	}
 
 	_render() {
@@ -147,25 +142,25 @@ class App {
 		//scene.add(directionalLightHelper);
 	}
 
-	_createBox() {
-		const geometry = new BoxBufferGeometry(1, 1, 1, 1, 1, 1)
+	// _createBox() {
+	// 	const geometry = new BoxBufferGeometry(1, 1, 1, 1, 1, 1)
 
-		const material = new MeshStandardMaterial({ color: 0xffffff })
+	// 	const material = new MeshStandardMaterial({ color: 0xffffff })
 
-		this.box = new Mesh(geometry, material)
-		this.box.scale.x = 5
-		this.box.scale.y = 5
-		this.box.scale.z = 5
-		this.scene.add(this.box)
-	}
+	// 	this.box = new Mesh(geometry, material)
+	// 	this.box.scale.x = 5
+	// 	this.box.scale.y = 5
+	// 	this.box.scale.z = 5
+	// 	this.scene.add(this.box)
+	// }
 
 	_createDebugPanel() {
-		this.pane = new Tweakpane()
+		this.debugPane = new Tweakpane()
 
 		/**
 		 * Scene configuration
 		 */
-		const sceneFolder = this.pane.addFolder({ title: 'Scene' })
+		const sceneFolder = this.debugPane.addFolder({ title: 'Scene' })
 
 		let params = { background: { r: 18, g: 18, b: 18 } }
 
@@ -174,44 +169,22 @@ class App {
 		})
 
 		/**
-		 * Box configuration
-		 */
-		const boxFolder = this.pane.addFolder({ title: 'Box' })
-
-		params = { width: 5, height: 5, depth: 5, metalness: 0.5, roughness: 0.5 }
-
-		boxFolder.addInput(params, 'width', { label: 'Width', min: 1, max: 8 })
-			.on('change', value => this.box.scale.x = value)
-
-		boxFolder.addInput(params, 'height', { label: 'Height', min: 1, max: 8 })
-			.on('change', value => this.box.scale.y = value)
-
-		boxFolder.addInput(params, 'depth', { label: 'Depth', min: 1, max: 8 })
-			.on('change', value => this.box.scale.z = value)
-
-		boxFolder.addInput(params, 'metalness', { label: 'Metallic', min: 0, max: 1 })
-			.on('change', value => this.box.material.metalness = value)
-
-		boxFolder.addInput(params, 'roughness', { label: 'Roughness', min: 0, max: 1 })
-			.on('change', value => this.box.material.roughness = value)
-
-		/**
 		 * Light configuration
 		 */
-		const lightFolder = this.pane.addFolder({ title: 'Light' })
+		// const lightFolder = this.debugPane.addFolder({ title: 'Light' })
 
-		params = {
-			color: { r: 255, g: 0, b: 85 },
-			intensity: 500
-		}
+		// params = {
+		// 	color: { r: 255, g: 0, b: 85 },
+		// 	intensity: 500
+		// }
 
-		lightFolder.addInput(params, 'color', { label: 'Color' }).on('change', value => {
-			this.pointLight.color = new Color(`rgb(${parseInt(value.r)}, ${parseInt(value.g)}, ${parseInt(value.b)})`)
-		})
+		// lightFolder.addInput(params, 'color', { label: 'Color' }).on('change', value => {
+		// 	this.pointLight.color = new Color(`rgb(${parseInt(value.r)}, ${parseInt(value.g)}, ${parseInt(value.b)})`)
+		// })
 
-		lightFolder.addInput(params, 'intensity', { label: 'Intensity', min: 0, max: 1000 }).on('change', value => {
-			this.pointLight.intensity = value
-		})
+		// lightFolder.addInput(params, 'intensity', { label: 'Intensity', min: 0, max: 1000 }).on('change', value => {
+		// 	this.pointLight.intensity = value
+		// })
 	}
 
 	_addListeners() {
